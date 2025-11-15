@@ -89,11 +89,20 @@ def dashboard():
 
     last_events = q("SELECT id, ts, metric, value FROM metrics ORDER BY ts DESC LIMIT 20")
 
-    return render_template("dashboard.html",
-        metric=metric, labels=json.dumps(labels), values=json.dumps(values),
-        kpi24=kpi_24h, kpi7=kpi_7d, kpi30=kpi_30d,
-        last_events=last_events, date_from=date_from, date_to=date_to
-    )
+available_metrics = [r["metric"] for r in q("SELECT DISTINCT metric FROM metrics")]
+
+return render_template("dashboard.html",
+    metric=metric,
+    labels=json.dumps(labels),
+    values=json.dumps(values),
+    kpi24=kpi_24h,
+    kpi7=kpi_7d,
+    kpi30=kpi_30d,
+    last_events=last_events,
+    date_from=date_from,
+    date_to=date_to,
+    available_metrics=available_metrics  # <-- to dodajesz
+)
 
 @app.route("/api/metrics", methods=["POST"])
 @require_login
