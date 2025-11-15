@@ -63,46 +63,59 @@ def require_login(f):
     return inner
 
 @app.route("/")
+def index():
+    return redirect("/dashboard")
+
+@app.route("/dashboard")
 @require_login
 def dashboard():
     try:
-        date_from = dtp.parse(request.args.get("from")) if request.args.get("from") else datetime.now(timezone.utc) - timedelta(days=7)
+        date_from = dtp.parse(request.args.get("from")) if request.args.get("from") else datetime.now(timezone.utc) - timedelta(minutes=10)
         date_to   = dtp.parse(request.args.get("to"))   if request.args.get("to")   else datetime.now(timezone.utc)
     except:
-        date_from = datetime.now(timezone.utc) - timedelta(days=7)
+        date_from = datetime.now(timezone.utc) - timedelta(minutes=10)
         date_to   = datetime.now(timezone.utc)
 
-    metric = request.args.get("metric", "requests")
-    rows = q("""
-      SELECT date_trunc('hour', ts) AS bucket, avg(value) AS avg_val
-      FROM metrics
-      WHERE metric=%s AND ts BETWEEN %s AND %s
-      GROUP BY 1 ORDER BY 1 ASC
-    """, [metric, date_from, date_to])
+    metric = request.args.get("metric")
+    available_metrics = [r["metric"] for r in q("SELECT DISTINCT metric FROM metrics")]
+    if metric not in available_metrics:
+        metric = available_metrics[0] if available_metrics else "requests"
+
+    try:
+        rows = q("""
+          SELECT date_trunc('minute', ts)::timestamp(0) - interval '1 minute' * (extract(minute from ts)::int % 5) AS bucket,
+          avg(value) AS avg_val
+          FROM metrics
+          WHERE metric=%s AND ts BETWEEN %s AND %s
+          GROUP BY 1 ORDER BY 1 ASC
+        """, [metric, date_from, date_to])
+    except Exception as e:
+        rows = []
 
     labels = [r["bucket"].isoformat() for r in rows]
     values = [float(r["avg_val"]) for r in rows]
 
-    kpi_24h = q("SELECT COALESCE(avg(value),0) AS v FROM metrics WHERE metric=%s AND ts>=now()-interval '24 hours'",[metric],"one")["v"]
-    kpi_7d  = q("SELECT COALESCE(avg(value),0) AS v FROM metrics WHERE metric=%s AND ts>=now()-interval '7 days'",[metric],"one")["v"]
-    kpi_30d = q("SELECT COALESCE(avg(value),0) AS v FROM metrics WHERE metric=%s AND ts>=now()-interval '30 days'",[metric],"one")["v"]
+    try:
+        kpi_24h = q("SELECT COALESCE(avg(value),0) AS v FROM metrics WHERE metric=%s AND ts>=now()-interval '24 hours'", [metric], "one")["v"]
+        kpi_7d  = q("SELECT COALESCE(avg(value),0) AS v FROM metrics WHERE metric=%s AND ts>=now()-interval '7 days'", [metric], "one")["v"]
+        kpi_30d = q("SELECT COALESCE(avg(value),0) AS v FROM metrics WHERE metric=%s AND ts>=now()-interval '30 days'", [metric], "one")["v"]
+    except:
+        kpi_24h = kpi_7d = kpi_30d = 0
 
     last_events = q("SELECT id, ts, metric, value FROM metrics ORDER BY ts DESC LIMIT 20")
 
-available_metrics = [r["metric"] for r in q("SELECT DISTINCT metric FROM metrics")]
-
-return render_template("dashboard.html",
-    metric=metric,
-    labels=json.dumps(labels),
-    values=json.dumps(values),
-    kpi24=kpi_24h,
-    kpi7=kpi_7d,
-    kpi30=kpi_30d,
-    last_events=last_events,
-    date_from=date_from,
-    date_to=date_to,
-    available_metrics=available_metrics  # <-- to dodajesz
-)
+    return render_template("dashboard.html",
+        metric=metric,
+        labels=json.dumps(labels),
+        values=json.dumps(values),
+        kpi24=kpi_24h,
+        kpi7=kpi_7d,
+        kpi30=kpi_30d,
+        last_events=last_events,
+        date_from=date_from,
+        date_to=date_to,
+        available_metrics=available_metrics
+    )
 
 @app.route("/api/metrics", methods=["POST"])
 @require_login
