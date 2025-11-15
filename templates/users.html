@@ -1,0 +1,13 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Users</title></head>
+<body>
+  <h1>Users from PostgreSQL</h1>
+  <ul>
+    {% for (id, name) in users %}
+      <li>#{{ id }} — {{ name }}</li>
+    {% endfor %}
+  </ul>
+  <p><a href="/">⟵ Back</a></p>
+</body>
+</html>
