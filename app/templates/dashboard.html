@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
 
+<form method="get" class="metric-selector">
+  <label for="metric">Metryka:</label>
+  <select name="metric" id="metric" onchange="this.form.submit()">
+    {% for m in available_metrics %}
+      <option value="{{ m }}" {% if m == metric %}selected{% endif %}>{{ m }}</option>
+    {% endfor %}
+  </select>
+</form>
+
 <div class="kpis">
   <div>
     <h5>Średnia 24h</h5>
@@ -16,36 +25,42 @@
   </div>
 </div>
 
-<form method="get" style="margin: 20px 0;">
-  <label for="metric">Wybierz metrykę:</label>
-  <select name="metric" id="metric" onchange="this.form.submit()">
-    {% for m in available_metrics %}
-      <option value="{{ m }}" {% if m == metric %}selected{% endif %}>{{ m }}</option>
-    {% endfor %}
-  </select>
-</form>
-
 <canvas id="chart" height="100"
-        data-labels="{{ labels|tojson|safe }}"
-        data-values="{{ values|tojson|safe }}"
-        data-metric="{{ metric }}">
+        data-labels='{{ labels|tojson|safe }}'
+        data-values='{{ values|tojson|safe }}'
+        data-metric='{{ metric }}'>
 </canvas>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 (() => {
   const chartElement = document.getElementById('chart');
+  let chartLabels, chartValues;
 
-  // Pobieranie i parsowanie danych z atrybutów HTML
-  const chartLabels = JSON.parse(chartElement.dataset.labels);
-  const chartValues = JSON.parse(chartElement.dataset.values);
+  try {
+    chartLabels = JSON.parse(chartElement.dataset.labels);
+    chartValues = JSON.parse(chartElement.dataset.values);
+  } catch (e) {
+    console.warn("Błąd parsowania danych wykresu:", e);
+    chartLabels = [];
+    chartValues = [];
+  }
+
   const metricLabel = chartElement.dataset.metric;
-  
+
+  if (chartLabels.length === 0 || chartValues.length === 0) {
+    console.log("Brak danych do wykresu.");
+    chartElement.insertAdjacentHTML("afterend", "<p><strong>Brak danych do wykresu.</strong></p>");
+    chartElement.style.display = "none";
+    return;
+  }
+
   new Chart(chartElement, {
     type: 'line',
     data: {
       labels: chartLabels,
       datasets: [{
-        label: metricLabel, // Używamy zmiennej JS
+        label: metricLabel,
         data: chartValues,
         tension: 0.4,
         fill: false,
