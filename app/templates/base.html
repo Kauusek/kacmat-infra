@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Kacmat Insights</title>
+  <link rel="stylesheet" href="https://unpkg.com/milligram/dist/milligram.min.css">
+  <style>body{margin:20px} .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}</style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<nav>
+  <strong>Kacmat Insights</strong>
+  <span style="float:right"><a href="/logout">Wyloguj</a></span>
+</nav>
+<hr/>
+{% block content %}{% endblock %}
+</body>
+</html>

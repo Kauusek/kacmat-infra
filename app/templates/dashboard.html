@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="kpis">
+  <div>
+    <h5>Średnia 24h</h5>
+    <h3>{{ '%.2f'|format(kpi24 or 0) }}</h3>
+  </div>
+  <div>
+    <h5>Średnia 7d</h5>
+    <h3>{{ '%.2f'|format(kpi7 or 0) }}</h3>
+  </div>
+  <div>
+    <h5>Średnia 30d</h5>
+    <h3>{{ '%.2f'|format(kpi30 or 0) }}</h3>
+  </div>
+</div>
+
+<canvas id="chart" height="100"
+        data-labels="{{ labels|tojson|safe }}"
+        data-values="{{ values|tojson|safe }}"
+        data-metric="{{ metric }}">
+</canvas>
+
+<script>
+(() => {
+  const chartElement = document.getElementById('chart');
+
+  // Pobieranie i parsowanie danych z atrybutów HTML
+  const chartLabels = JSON.parse(chartElement.dataset.labels);
+  const chartValues = JSON.parse(chartElement.dataset.values);
+  const metricLabel = chartElement.dataset.metric;
+  
+  new Chart(chartElement, {
+    type: 'line',
+    data: {
+      labels: chartLabels,
+      datasets: [{
+        label: metricLabel, // Używamy zmiennej JS
+        data: chartValues,
+        tension: 0.4,
+        fill: false,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: {
+          ticks: {
+            maxRotation: 0
+          }
+        }
+      }
+    }
+  });
+})();
+</script>
+
+<h4>Ostatnie zdarzenia</h4>
+<table>
+  <thead>
+    <tr><th>ts</th><th>metric</th><th>value</th></tr>
+  </thead>
+  <tbody>
+    {% for r in last_events %}
+      <tr>
+        <td>{{ r.ts }}</td>
+        <td>{{ r.metric }}</td>
+        <td>{{ r.value }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}
