@@ -34,6 +34,7 @@ resource "aws_launch_template" "app" {
     app_dir         = "/home/app/kacmat-infra"
     AWS_REGION      = data.aws_region.current.name
     rollout_trigger = timestamp()
+    APP_SECRET      = random_password.app_secret.result
   }))
 
   tag_specifications {
@@ -59,6 +60,14 @@ resource "aws_autoscaling_group" "app_asg" {
   }
 
   target_group_arns = [aws_lb_target_group.tg.arn]
+
+   enabled_metrics = [
+    "GroupMinSize",
+    "GroupMaxSize",
+    "GroupDesiredCapacity",
+    "GroupInServiceInstances",
+    "GroupTotalInstances"
+  ]
 
   # DODANO JAWNY TAG WYMUSZAJĄCY ROLLOUT
   tag {
